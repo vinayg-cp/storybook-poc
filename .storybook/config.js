@@ -19,7 +19,8 @@ addParameters({
 
 const req = require.context('../src', true, /\.story\.(js|jsx|ts|tsx|mdx)$/)
 function loadStories() {
-	req.keys().forEach(req)
+	// return req.keys().forEach(req)
+	return require.context('../src', true, /\.story\.(js|jsx|ts|tsx|mdx)$/);
 }
 
 addDecorator(withNotes)
@@ -53,7 +54,7 @@ window.___navigate = pathname => {
 }
 
 // configure(loadStories, module)
-configure(require.context('../src/', true, /\.story\.(js|jsx|ts|tsx|mdx)$/), module)
+configure(loadStories(), module);
 
 // configureViewport({
 // 	defaultViewport: 'ipad'
