@@ -1,64 +1,27 @@
-/* eslint-disable no-underscore-dangle */
-
-import { configure, addDecorator, addParameters } from '@storybook/react'
-import { withNotes } from '@storybook/addon-notes'
-import { themes } from '@storybook/theming';
-// import { configureViewport } from '@storybook/addon-viewport'
-
+import { configure, addParameters } from '@storybook/react';
+import { DocsPage, DocsContainer } from '@storybook/addon-docs/blocks';
+import { action } from '@storybook/addon-actions';
 import '../main.css';
 
 addParameters({
-	options: {
-	  theme: {
-		...themes.dark,
-		brandTitle: 'Codeparva',
-		url: 'https://codeparva.com'
-	  }
-	},
-  });
-
-const req = require.context('../src', true, /\.story\.(js|jsx|ts|tsx|mdx)$/)
-function loadStories() {
-	// return req.keys().forEach(req)
-	return require.context('../src', true, /\.story\.(js|jsx|ts|tsx|mdx)$/);
-}
-
-addDecorator(withNotes)
-
-addDecorator(story => {
-	const vh = window.innerHeight * 0.01
-	// Then we set the value in the --vh custom property to the root of the document
-	document.documentElement.style.setProperty('--vh', `${vh}px`)
-	window.addEventListener('resize', () => {
-		document.documentElement.style.setProperty(
-			'--vh',
-			`${window.innerHeight * 0.01}px`
-		)
-	})
-	return story()
-})
+  docs: {
+    container: DocsContainer,
+    page: DocsPage,
+    prepareForInline: (storyFn) => storyFn(),
+  },
+});
 
 // Gatsby's Link overrides:
 // Gatsby defines a global called ___loader to prevent its method calls from creating console errors you override it here
 global.___loader = {
-	enqueue: () => {},
-	hovering: () => {}
-}
-
+  enqueue: () => {},
+  hovering: () => {}
+};
 // Gatsby internal mocking to prevent unnecessary errors in storybook testing environment
-global.__PATH_PREFIX__ = ''
-
+global.__PATH_PREFIX__ = '';
 // This is to utilized to override the window.___navigate method Gatsby defines and uses to report what path a Link would be taking us to if it wasn't inside a storybook
 window.___navigate = pathname => {
-	action('NavigateTo:')(pathname) // eslint-disable-line
-}
+  action('NavigateTo:')(pathname);
+};
 
-// configure(loadStories, module)
-configure(loadStories(), module);
-
-// configureViewport({
-// 	defaultViewport: 'ipad'
-// })
-
-// https://github.com/storybooks/addon-jsx
-// setAddon(JSXAddon)
+configure(require.context('../src', true, /\.stories\.(js|mdx)$/), module);
