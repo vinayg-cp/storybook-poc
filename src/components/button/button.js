@@ -30,6 +30,7 @@ const Button = ({ style, textColor, children }) => {
 export default Button;
 
 Button.propTypes = {
+    /** Demo comment */
     style: PropTypes.string,
     textColor: PropTypes.string,
     children: PropTypes.any,
