@@ -1,135 +1,104 @@
-// module.exports = ({ config, mode }) => {
-//     // Transpile Gatsby module because Gastby includes un-transpiled ES6 code.
-//     config.module.rules[0].exclude = [/node_modules\/(?!(gatsby)\/)/]
-//     // use installed babel-loader which is v8.0-beta (which is meant to work with @babel/core@7)
-//     config.module.rules[0].use[0].loader = require.resolve('babel-loader')
-  
-//     // The next two lines should always reflect the config in jest-preprocess.js until there is a way for Gatsby to expose an internal webpack.config
-//     // use @babel/preset-react for JSX and env (instead of staged presets)
-//     config.module.rules[0].use[0].options.presets = [
-//       require.resolve('@babel/preset-react'),
-//       require.resolve('@babel/preset-env'),
-//     ]
-//     // use @babel/plugin-proposal-class-properties for class arrow functions
-//     config.module.rules[0].use[0].options.plugins = [
-//       require.resolve('@babel/plugin-proposal-class-properties'),
-//     ]
-  
-//     // https://github.com/gatsbyjs/gatsby/issues/10662:
-//     // Prefer Gatsby ES6 entrypoint (module) over commonjs (main) entrypoint
-//     config.resolve.mainFields = ["browser", "module", "main"]
-  
-//     return config
-// }
+const path = require('path');
+const webpack = require('webpack');
 
-/* eslint-disable no-param-reassign */
-
-const path = require('path')
-const webpack = require('webpack')
-const createCompiler = require('@storybook/addon-docs/mdx-compiler-plugin');
-
-// Export a function. Accept the base config as the only param.
 module.exports = async ({ config, mode }) => {
-	const isProduction = mode
+  const isProduction = mode;
+  const createCompiler = require('@storybook/addon-docs/mdx-compiler-plugin');
+  // Transpile Gatsby module because Gatsby includes un-transpiled ES6 code.
+  config.module.rules[0].exclude = [/node_modules\/(?!(gatsby)\/)/];
+  // use installed babel-loader which is v8.0-beta (which is meant to work with @babel/core@7)
+  config.module.rules[0].use[0].loader = require.resolve('babel-loader');
+  // use @babel/preset-react for JSX and env (instead of staged presets)
+  config.module.rules[0].use[0].options.presets = [
+    require.resolve('@babel/preset-react'),
+    require.resolve('@babel/preset-env')
+  ];
+  config.module.rules[0].use[0].options.plugins = [
+    // use @babel/plugin-proposal-class-properties for class arrow functions
+    require.resolve('@babel/plugin-proposal-class-properties'),
+    // use babel-plugin-remove-graphql-queries to remove static queries from components when rendering in storybook
+    require.resolve('babel-plugin-remove-graphql-queries')
+  ];
 
-	// Transpile Gatsby module because Gatsby includes un-transpiled ES6 code.
-	config.module.rules[0].exclude = [/node_modules\/(?!(gatsby)\/)/]
+  config.module.rules = config.module.rules.filter(
+    f => f.test.toString() !== '/\\.css$/'
+  );
 
-	// use installed babel-loader which is v8.0-beta (which is meant to work with @babel/core@7)
-	config.module.rules[0].use[0].loader = require.resolve('babel-loader')
+  config.module.rules.push(
+    {
+      test: /\.(stories|story)\.mdx$/,
+      use: [
+        {
+          loader: 'babel-loader',
+          // may or may not need this line depending on your app's setup
+          options: {
+            plugins: ['@babel/plugin-transform-react-jsx']
+          }
+        },
+        {
+          loader: '@mdx-js/loader',
+          options: {
+            compilers: [createCompiler({})]
+          }
+        }
+      ]
+    },
+    {
+      test: /\.(stories|story)\.[tj]sx?$/,
+      loader: require.resolve('@storybook/source-loader'),
+      exclude: [/node_modules/],
+      enforce: 'pre'
+    },
+    {
+      test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/
+    },
+    {
+      test: /\.(jpg|png|jpeg|jpg)$/,
+      loader: 'file-loader',
+      include: path.resolve(__dirname, '../static/')
+    },
+    {
+      test: /\.css$/,
+      exclude: /\.module\.css$/,
+      use: [
+        'style-loader',
+        {
+          loader: 'css-loader',
+          options: {
+            importLoaders: 1
+          }
+        },
+        'postcss-loader'
+      ],
+      include: path.resolve(__dirname, '../')
+    },
+    {
+      test: /\.module\.css$/,
+      use: [
+        'style-loader',
+        {
+          loader: 'css-loader',
+          options: {
+            importLoaders: 1,
+            modules: true
+          }
+        },
+        'postcss-loader'
+      ],
+      include: path.resolve(__dirname, '../src')
+    }
+  );
 
-	// use @babel/preset-react for JSX and env (instead of staged presets)
-	config.module.rules[0].use[0].options.presets = [
-		require.resolve('@babel/preset-react'),
-		require.resolve('@babel/preset-env')
-	]
+  // setting NODE_ENV to production so that babel-plugin-remove-graphql-queries, ref https://www.gatsbyjs.org/docs/visual-testing-with-storybook/
+  // not sure about the STORYBOOK part, just see it in other projects using gatsby and storybook
+  config.plugins.push(
+    new webpack.DefinePlugin({
+      STORYBOOK: JSON.stringify(true),
+      PRODUCTION: JSON.stringify(isProduction)
+    })
+  );
 
-	// use @babel/plugin-proposal-class-properties for class arrow functions
-	config.module.rules[0].use[0].options.plugins = [
-		require.resolve('@babel/plugin-proposal-class-properties'),
-		require.resolve('babel-plugin-remove-graphql-queries')
-	]
-
-	config.module.rules = config.module.rules.filter(
-		f => f.test.toString() !== '/\\.css$/'
-	)
-
-	config.module.rules.push(
-		{
-			test: /\.(ttf|woff|woff2|eot|svg)$/,
-			use: 'file-loader?name=[name].[ext]',
-			exclude: /\.inline.svg$/
-		},
-		{
-			test: /\.(jpg|png|jpeg|jpg)$/,
-			loader: 'file-loader',
-			include: path.resolve(__dirname, '../static/')
-		},
-		{
-			test: /\.css$/,
-			exclude: /\.module\.css$/,
-			use: [
-				'style-loader',
-				{
-					loader: 'css-loader',
-					options: {
-						importLoaders: 1,
-						localIdentName: 'mod-[hash:base64:8]'
-					}
-				},
-				'postcss-loader'
-			],
-			include: path.resolve(__dirname, '../')
-		},
-		{
-			test: /\.story\.mdx$/,
-			exclude: [/node_modules/],
-			include: [
-				path.resolve(__dirname, '../src'),
-			],
-			use: [
-			  {
-				loader: 'babel-loader',
-				options: {
-				  plugins: ['@babel/plugin-transform-react-jsx']
-				}
-			  },
-			  {
-				loader: '@mdx-js/loader',
-				options: {
-				  compilers: [createCompiler({})]
-				}
-			  }
-			],
-		  },
-		{
-			test: /\.module\.css$/,
-			use: [
-				'style-loader',
-				{
-					loader: 'css-loader',
-					options: {
-						importLoaders: 1,
-						modules: true,
-						localIdentName: '[local]-[hash:base64:5]'
-					}
-				},
-				'postcss-loader'
-			],
-			include: path.resolve(__dirname, '../src')
-		}
-	)
-
-	config.plugins.push(
-		new webpack.DefinePlugin({
-			STORYBOOK: JSON.stringify(true),
-			PRODUCTION: JSON.stringify(isProduction)
-		})
-	)
-
-	config.resolve.alias['@'] = path.resolve(__dirname, '../src/')
-
-	config.resolve.mainFields = ['browser', 'module', 'main']
-
-	return config
-}
+  // Prefer Gatsby ES6 entrypoint (module) over commonjs (main) entrypoint
+  config.resolve.mainFields = ['browser', 'module', 'main'];
+  return config;
+};
