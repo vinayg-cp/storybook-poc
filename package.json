@@ -4,7 +4,7 @@
     "main": "index.js",
     "license": "MIT",
     "dependencies": {
-        "gatsby-plugin-mdx": "^1.0.52",
+        "gatsby-plugin-mdx": "^2.14.1",
         "gatsby-plugin-page-creator": "^2.1.16",
         "gatsby": "^2.15.11",
         "react": "^16.9.0",
